@@ -1,0 +1,669 @@
+
+import React, { useState, useEffect } from 'react';
+import { 
+  getMarketAnalysis, 
+  discoverTrendingAINews, 
+  fetchAICompanies, 
+  refineCuratedContent, 
+  generateBrandMascot 
+} from './services/geminiService';
+import { AnalysisResult, AIDomain, AICompany, CurationFilters, RefinedItem } from './types';
+
+const AI_DOMAINS: AIDomain[] = [
+  { id: 'experimental', name: 'Experimental Tools', subfields: ['Google Labs', 'Edge Cases', 'Creative Tech', 'Future UX', 'Unstable Releases', 'Alpha Prototypes'] },
+  { id: 'health', name: 'Health & Biotech', subfields: ['Drug Discovery', 'Neural Prosthetics', 'Genomics AI', 'Synthetic Bio', 'Radiology Automation', 'Longevity Research', 'Virtual Nursing Agents'] },
+  { id: 'finance', name: 'Finance & Fintech', subfields: ['Algorithmic Trading', 'Predictive Risk', 'Neo-banking Agents', 'Auto-Accounting', 'Fraud Detection', 'Real-time Quant', 'Credit Intelligence'] },
+  { id: 'creative', name: 'Creative Arts', subfields: ['Generative Video', 'Neural Audio/Speech', '3D Scene Gen', 'Fashion Design AI', 'Architectural Gen', 'Dynamic UX Design', 'Virtual Production'] },
+  { id: 'dev', name: 'Dev & Software Engineering', subfields: ['Code Generation', 'Autonomous Agents', 'Legacy Migration', 'CI/CD Intelligence', 'Synthetic Data Gen', 'Unit Test Auto', 'DevOps Copilot'] },
+  { id: 'edu', name: 'Education', subfields: ['Adaptive Learning', 'Cognitive Skill Mapping', 'Language Immersion AI', 'Automated Assessment', 'Curriculum Synth', 'Personalized Tutors', 'Lecture Insights'] },
+  { id: 'legal', name: 'Legal & Compliance', subfields: ['Contract Intelligence', 'E-Discovery', 'Regulatory Tracking', 'Case Outcome Pred', 'Patent Analysis', 'Privacy Compliance', 'Smart Legal Agents'] },
+  { id: 'robotics', name: 'Robotics & Hardware', subfields: ['Swarm Intelligence', 'SLAM / Vision', 'HRI (Human-Robot)', 'Warehouse Automation', 'Soft Robotics', 'Embedded Edge AI', 'Autonomous Logistics'] },
+  { id: 'marketing', name: 'Marketing & Sales', subfields: ['Hyper-Personalization', 'Sentiment Analysis', 'Dynamic Pricing', 'Persona Simulation', 'Campaign Auto', 'Journey Mapping', 'Lead Prediction'] }
+];
+
+const SOCIAL_PLATFORMS = [
+  { 
+    id: 'x', 
+    name: 'X', 
+    color: '#fff', 
+    glow: 'rgba(255,255,255,0.2)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+    ),
+    getUrl: (text: string, url: string) => `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+  },
+  { 
+    id: 'linkedin', 
+    name: 'LinkedIn', 
+    color: '#0077b5', 
+    glow: 'rgba(0,119,181,0.3)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      </svg>
+    ),
+    getUrl: (_text: string, url: string) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+  },
+  { 
+    id: 'whatsapp', 
+    name: 'WhatsApp', 
+    color: '#25D366', 
+    glow: 'rgba(37,211,102,0.3)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    ),
+    getUrl: (text: string, url: string) => `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`
+  },
+  { 
+    id: 'telegram', 
+    name: 'Telegram', 
+    color: '#0088cc', 
+    glow: 'rgba(0,136,204,0.3)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.702.061-1.235-.469-1.914-.914-1.062-.697-1.662-1.131-2.692-1.809-1.19-.783-.418-1.213.259-1.914.177-.183 3.246-2.977 3.305-3.23.007-.032.014-.15-.056-.212-.07-.063-.173-.041-.247-.024-.105.024-1.776 1.131-5.029 3.332-.477.328-.91.488-1.298.479-.427-.009-1.248-.242-1.859-.44-.75-.242-1.343-.371-1.291-.783.027-.214.323-.433.886-.657 3.487-1.517 5.811-2.52 6.972-3.008 3.315-1.391 4.002-1.631 4.452-1.639.1-.002.323.023.468.141.122.1.156.235.163.342.007.1.01.217.005.32z"/>
+      </svg>
+    ),
+    getUrl: (text: string, url: string) => `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
+  },
+  { 
+    id: 'facebook', 
+    name: 'Facebook', 
+    color: '#1877F2', 
+    glow: 'rgba(24,119,242,0.3)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+    ),
+    getUrl: (_text: string, url: string) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+  },
+  { 
+    id: 'threads', 
+    name: 'Threads', 
+    color: '#fff', 
+    glow: 'rgba(255,255,255,0.2)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M14.28 12.56c-.08-.05-.15-.12-.21-.19-.06-.07-.11-.15-.15-.24-.04-.09-.06-.18-.07-.28 0-.1.01-.19.03-.29.03-.1.08-.2.14-.28.06-.09.14-.16.23-.22.09-.06.19-.1.3-.13.11-.03.22-.04.33-.03.11.01.21.03.32.07.1.04.19.1.27.18.08.08.14.17.18.28.04.11.06.22.06.34 0 .12-.02.23-.07.34-.05.11-.11.21-.2.29-.08.09-.18.16-.29.21-.11.05-.23.08-.35.09-.13.01-.25 0-.37-.03-.12-.03-.23-.08-.33-.14zm-4.31-.96c.01-.06.01-.12.01-.19 0-.25-.03-.49-.09-.72-.06-.23-.15-.45-.27-.64-.12-.2-.28-.36-.46-.49-.19-.13-.4-.2-.64-.2-.17 0-.32.03-.46.09-.14.06-.26.15-.35.26-.1.11-.17.24-.22.38-.05.15-.07.31-.07.49 0 .17.02.34.07.49.05.15.12.28.21.4.09.12.21.21.34.28.14.07.29.1.45.1.22 0 .42-.07.59-.2s.31-.31.42-.51c.11-.2.18-.43.23-.67s.07-.48.07-.73zM24 12c0 6.63-5.37 12-12 12S0 18.63 0 12 5.37 0 12 0s12 5.37 12 12zm-4.7 0c0-1.22-.19-2.31-.56-3.26-.37-.95-.91-1.73-1.6-2.34s-1.54-1.05-2.52-1.34c-.99-.29-2.1-.43-3.34-.43-1.18 0-2.24.13-3.17.4s-1.72.64-2.37 1.1c-.65.46-1.15 1.01-1.5 1.66s-.52 1.38-.52 2.19c0 .76.13 1.45.39 2.05s.63 1.11 1.09 1.52.99.72 1.6.93 1.25.32 1.94.32c.67 0 1.28-.1 1.83-.3s1.04-.47 1.47-.8c.43-.33.78-.73 1.05-1.19.27-.46.41-.96.42-1.49l.01-.06c.15-.02.32-.04.49-.04h.14c.17 0 .32.02.46.06.14.04.26.11.35.19.1.09.16.2.19.33.03.13.04.28.01.44-.06.4-.23.77-.51 1.08-.28.32-.61.59-1 .8-.39.22-.81.38-1.26.49-.45.11-.91.17-1.38.17-.79 0-1.54-.1-2.23-.3-.7-.2-1.31-.5-1.83-.89s-.94-.88-1.23-1.47c-.3-.59-.44-1.28-.44-2.07 0-.74.13-1.39.4-1.95s.63-1.02 1.08-1.39.99-.64 1.6-.82 1.26-.27 1.96-.27c.8 0 1.5.12 2.1.35s1.11.55 1.52.96.72.88.94 1.42c.22.54.32 1.15.32 1.83 0 .74-.13 1.39-.41 1.95s-.65 1.02-1.1 1.39-.99.64-1.63.81-1.31.26-2.02.26c-.73 0-1.41-.09-2.02-.27s-1.14-.45-1.59-.8c-.45-.35-.8-.78-1.04-1.3s-.36-1.11-.36-1.78c0-.72.12-1.36.37-1.92s.6-1.03 1.05-1.4 1.02-.66 1.68-.87 1.41-.32 2.25-.32c.86 0 1.61.12 2.26.37s1.19.58 1.6 1.01.71.93.89 1.5.28 1.18.28 1.85 0 1.11-.14 2.12-.42 1.91-.84 2.7-.98 1.46-1.72 2.01c-.74.55-1.65.83-2.73.83-1.07 0-2-.22-2.79-.65s-1.45-1.01-1.99-1.73-1-1.56-1.37-2.52c-.37-.96-.55-2.01-.55-3.14s.19-2.18.57-3.13 1.55-1.73 2.53-2.34 2.1-1.05 3.35-1.34c1.25-.29 2.59-.43 4-.43 1.37 0 2.58.14 3.63.42s1.95.69 2.7 1.23 1.32 1.22 1.7 2.05c.38.83.57 1.81.57 2.95 0 1.23-.2 2.32-.59 3.26s-.94 1.73-1.66 2.35-1.58 1.07-2.6 1.37c-1.02.3-2.14.45-3.37.45-.63 0-1.25-.04-1.86-.11s-1.2-.2-1.77-.38c-.57-.18-1.11-.42-1.61-.73-.5-.31-.96-.68-1.38-1.1-.55-.54-1-1.18-1.34-1.91s-.51-1.56-.51-2.48c0-.78.13-1.5.38-2.16s.62-1.22 1.09-1.69 1.04-.84 1.71-1.1 1.4-.39 2.18-.39z"/>
+      </svg>
+    ),
+    getUrl: (text: string, url: string) => `https://www.threads.net/intent/post?text=${encodeURIComponent(text + ' ' + url)}`
+  },
+  { 
+    id: 'reddit', 
+    name: 'Reddit', 
+    color: '#FF4500', 
+    glow: 'rgba(255,69,0,0.3)',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M24 11.5c0-1.65-1.35-3-3-3-.61 0-1.18.19-1.65.52C17.67 7.74 15.5 7 13.09 6.94l1.1-5.2 3.44.73c.06 1.07.94 1.93 2.02 1.93 1.11 0 2.02-.91 2.02-2.02 0-1.11-.91-2.02-2.02-2.02-1.01 0-1.85.75-1.99 1.73l-3.86-.82c-.13-.03-.27.02-.35.13l-1.25 5.92C9.74 7 7.5 7.77 5.71 9.02c-.47-.33-1.04-.52-1.65-.52-1.65 0-3 1.35-3 3 0 1.1.6 2.05 1.49 2.58-.06.28-.09.57-.09.87 0 3.86 4.48 7 10 7s10-3.14 10-7c0-.3-.03-.59-.09-.87.89-.53 1.49-1.48 1.49-2.58zM7.02 13.5c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm10.74 5.06c-1.1 1.1-2.91 1.61-4.76 1.61-1.85 0-3.66-.51-4.76-1.61-.19-.19-.19-.51 0-.71.2-.2.51-.2.71 0 .8.8 2.33 1.17 4.05 1.17 1.72 0 3.25-.37 4.05-1.17.2-.2.51-.2.71 0 .19.2.19.52 0 .72zm-1.74-3.06c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+      </svg>
+    ),
+    getUrl: (_text: string, url: string, title: string) => `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`
+  }
+];
+
+const App: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<AnalysisResult | null>(null);
+  const [view, setView] = useState<'analysis' | 'spec' | 'discovery' | 'public'>('analysis');
+  
+  // Brand Assets
+  const [mascotUrl, setMascotUrl] = useState<string>(() => localStorage.getItem('curator_mascot') || '');
+  const [isGeneratingMascot, setIsGeneratingMascot] = useState(false);
+
+  // Curation Filters States
+  const [companies, setCompanies] = useState<AICompany[]>([]);
+  const [filters, setFilters] = useState<CurationFilters>({
+    selectedDomains: [],
+    selectedSubfields: [],
+    selectedCompanies: [],
+    selectedSubtopics: []
+  });
+
+  // Discovery / Production Line States
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [discoveredAlerts, setDiscoveredAlerts] = useState<any[]>([]);
+  const [approvedTools, setApprovedTools] = useState<any[]>(() => {
+    const saved = localStorage.getItem('curator_approved_tools');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [refinedItems, setRefinedItems] = useState<RefinedItem[]>(() => {
+    const saved = localStorage.getItem('curator_refined_items');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [refiningId, setRefiningId] = useState<string | null>(null);
+
+  // Modal State
+  const [selectedItem, setSelectedItem] = useState<RefinedItem | null>(null);
+
+  const ideaDescription = `The AI Curator: Curation superpower, human filter, 1% quality, Apple Cosmic aesthetic. Fusing Cagan, Kim, and Graham.`;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [analysis, ecosystem] = await Promise.all([
+          getMarketAnalysis(ideaDescription),
+          fetchAICompanies()
+        ]);
+        setData(analysis);
+        setCompanies(ecosystem);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('curator_approved_tools', JSON.stringify(approvedTools));
+    localStorage.setItem('curator_refined_items', JSON.stringify(refinedItems));
+    localStorage.setItem('curator_mascot', mascotUrl);
+  }, [approvedTools, refinedItems, mascotUrl]);
+
+  const handleDiscovery = async () => {
+    setIsSyncing(true);
+    try {
+      const news = await discoverTrendingAINews(filters);
+      setDiscoveredAlerts(news);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleRefineItem = async (tool: any) => {
+    setRefiningId(tool.id);
+    try {
+      const refined = await refineCuratedContent(tool);
+      setRefinedItems(prev => [refined, ...prev.filter(item => item.id !== tool.id)]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRefiningId(null);
+    }
+  };
+
+  const handleMascotGenerate = async () => {
+    setIsGeneratingMascot(true);
+    try {
+      const url = await generateBrandMascot();
+      setMascotUrl(url);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsGeneratingMascot(false);
+    }
+  };
+
+  const toggleDomain = (domainId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedDomains: prev.selectedDomains.includes(domainId) 
+        ? prev.selectedDomains.filter(id => id !== domainId)
+        : [...prev.selectedDomains, domainId]
+    }));
+  };
+
+  const toggleSubfield = (sf: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedSubfields: prev.selectedSubfields.includes(sf)
+        ? prev.selectedSubfields.filter(id => id !== sf)
+        : [...prev.selectedSubfields, sf]
+    }));
+  };
+
+  const toggleCompany = (companyName: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedCompanies: prev.selectedCompanies.includes(companyName)
+        ? prev.selectedCompanies.filter(id => id !== companyName)
+        : [...prev.selectedCompanies, companyName]
+    }));
+  };
+
+  const toggleSubtopic = (subtopic: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedSubtopics: prev.selectedSubtopics.includes(subtopic)
+        ? prev.selectedSubtopics.filter(s => s !== subtopic)
+        : [...prev.selectedSubtopics, subtopic]
+    }));
+  };
+
+  const executeSocialShare = (e: React.MouseEvent, platform: any, item: RefinedItem) => {
+    e.stopPropagation();
+    const shareText = `[AI SIGNAL] ${item.hook} — Via AI Curator`;
+    const shareUrl = platform.id === 'reddit' 
+      ? platform.getUrl(shareText, item.originalLink, item.hook)
+      : platform.getUrl(shareText, item.originalLink);
+    
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#000] text-white p-6">
+        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h1 className="text-2xl font-black tracking-tighter uppercase italic">The AI Curator</h1>
+        <p className="text-gray-500 font-medium">Initializing Cosmic Deep-Scan...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white selection:bg-purple-500 overflow-x-hidden" dir="rtl">
+      {/* PERSISTENT HEADER */}
+      <nav className="max-w-7xl mx-auto px-10 py-8 flex justify-between items-center no-print">
+        <div className="text-2xl font-black tracking-tighter uppercase italic">AI CURATOR.</div>
+        <div className="flex gap-8">
+          {['analysis', 'spec', 'discovery', 'public'].map(v => (
+            <button 
+              key={v}
+              onClick={() => setView(v as any)}
+              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all ${view === v ? 'text-purple-400 border-b-2 border-purple-400 pb-2' : 'text-gray-500 hover:text-white'}`}
+            >
+              {v === 'analysis' ? 'Strategy' : v === 'spec' ? 'MVP Spec' : v === 'discovery' ? 'Production Line' : 'Public Feed'}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {view === 'discovery' && (
+        <div className="max-w-7xl mx-auto px-10 pb-40 space-y-16 animate-in slide-in-from-bottom duration-700">
+          <header className="flex flex-col md:flex-row justify-between items-end gap-10 text-right">
+             <div className="space-y-4">
+               <h1 className="text-6xl font-black text-white tracking-tighter uppercase italic">Production Line.</h1>
+               <p className="text-gray-500 text-lg font-medium">המנוע לזיקוק תוכן פרימיום. בחר תחומים, אשר פריטים, וזקק אותם לקול המותג.</p>
+             </div>
+             <div className="flex flex-col items-end gap-3">
+               <button 
+                  onClick={handleMascotGenerate}
+                  disabled={isGeneratingMascot}
+                  className={`px-8 py-4 ${mascotUrl ? 'bg-white/10' : 'bg-white text-black'} font-black rounded-full text-xs hover:bg-white/20 transition`}
+                >
+                  {isGeneratingMascot ? 'SCAFFOLDING...' : mascotUrl ? 'REFRESH MASCOT' : 'INITIALIZE MASCOT'}
+                </button>
+             </div>
+          </header>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+            {/* SEARCH DEFINITION SIDEBAR */}
+            <div className="lg:col-span-1 space-y-12 bg-gray-900/40 p-8 rounded-[40px] border border-gray-800 self-start">
+              {/* 1. Domains */}
+              <div className="space-y-6">
+                <h3 className="text-[10px] font-black text-purple-400 uppercase tracking-widest border-b border-purple-500/10 pb-2">1. Domains</h3>
+                <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                  {AI_DOMAINS.map(d => (
+                    <button 
+                      key={d.id}
+                      onClick={() => toggleDomain(d.id)}
+                      className={`w-full text-right px-4 py-2.5 rounded-xl text-[10px] font-black transition ${filters.selectedDomains.includes(d.id) ? 'bg-purple-600 text-white' : 'bg-gray-800/40 text-gray-500'}`}
+                    >
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Sub-fields */}
+              {filters.selectedDomains.length > 0 && (
+                <div className="space-y-6 animate-in fade-in duration-500">
+                  <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/10 pb-2">2. Subfields</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {AI_DOMAINS.filter(d => filters.selectedDomains.includes(d.id)).map(d => 
+                      d.subfields.map(sf => (
+                        <button 
+                          key={sf}
+                          onClick={() => toggleSubfield(sf)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-bold transition ${filters.selectedSubfields.includes(sf) ? 'bg-blue-600 text-white' : 'bg-gray-800/30 text-gray-600'}`}
+                        >
+                          {sf}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Ecosystem Tracking */}
+              <div className="space-y-6">
+                <h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest border-b border-emerald-500/10 pb-2">3. Ecosystem Tracking</h3>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                  {companies.map(c => (
+                    <div key={c.id} className="space-y-2">
+                      <button 
+                        onClick={() => toggleCompany(c.name)}
+                        className={`w-full text-right px-4 py-2.5 rounded-xl text-[10px] font-bold transition ${filters.selectedCompanies.includes(c.name) ? 'bg-emerald-600 text-white shadow-lg' : 'bg-gray-800/20 text-gray-600'}`}
+                      >
+                        {c.name}
+                      </button>
+                      {c.subtopics && c.subtopics.length > 0 && (
+                        <div className="flex flex-col gap-1 pr-4 border-r border-emerald-500/20 mr-2">
+                           {c.subtopics.map(st => (
+                             <button 
+                               key={st}
+                               onClick={() => toggleSubtopic(st)}
+                               className={`text-right px-3 py-1.5 rounded-lg text-[8px] font-black transition ${filters.selectedSubtopics.includes(st) ? 'bg-teal-600 text-white' : 'bg-white/5 text-gray-500'}`}
+                             >
+                               ↳ {st}
+                             </button>
+                           ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={handleDiscovery}
+                disabled={isSyncing}
+                className="w-full py-6 bg-white text-black font-black rounded-3xl hover:bg-gray-200 transition shadow-xl text-xs tracking-widest uppercase"
+              >
+                {isSyncing ? 'SYNCING LEAKS...' : 'RUN DEEP SCAN'}
+              </button>
+            </div>
+
+            {/* PRODUCTION LINE (SCRAPE -> REFINE -> CATALOG) */}
+            <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Inbox (Raw Scrapes) */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                   <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">1. Scraped Inbox</h3>
+                   <span className="text-[10px] text-gray-700 font-mono">N={discoveredAlerts.length}</span>
+                </div>
+                <div className="space-y-4 max-h-[800px] overflow-y-auto pr-3 custom-scrollbar">
+                  {discoveredAlerts.map(alert => (
+                    <div key={alert.id} className="bg-gray-900/40 border border-gray-800 p-6 rounded-[35px] space-y-4 group hover:border-purple-500/50 transition duration-500">
+                      <div className="flex justify-between items-start flex-row-reverse">
+                        <h4 className="font-bold text-white text-base leading-tight flex-1">{alert.title}</h4>
+                        <span className="text-purple-400 font-black text-xl mr-4">{alert.score}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs italic font-medium leading-relaxed">"{alert.summary}"</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => {
+                          setApprovedTools([alert, ...approvedTools]);
+                          setDiscoveredAlerts(d => d.filter(i=>i.id !== alert.id));
+                        }} className="flex-1 py-3 bg-emerald-600/10 text-emerald-400 font-black rounded-xl text-[10px] hover:bg-emerald-600 hover:text-white transition uppercase">Approve</button>
+                        <button onClick={() => setDiscoveredAlerts(d => d.filter(i=>i.id !== alert.id))} className="px-5 py-3 bg-gray-800 text-gray-600 rounded-xl text-[10px] uppercase">Skip</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Refinement Desk (Approved) */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-purple-500/20 pb-3">
+                   <h3 className="text-[10px] font-black text-purple-500 uppercase tracking-[0.3em]">2. Refinement Desk</h3>
+                   <span className="text-[10px] text-purple-900 font-mono">TASK A</span>
+                </div>
+                <div className="space-y-4 max-h-[800px] overflow-y-auto pr-3 custom-scrollbar">
+                  {approvedTools.map(tool => {
+                    const refined = refinedItems.find(ri => ri.id === tool.id);
+                    return (
+                      <div key={tool.id} className={`bg-black/30 border ${refined ? 'border-purple-500/30' : 'border-gray-800'} p-6 rounded-[35px] space-y-4 transition-all duration-500`}>
+                        <div className="flex justify-between items-center">
+                           <h4 className="font-bold text-white text-sm">{tool.title}</h4>
+                           {refined && <span className="text-emerald-500 font-black text-[10px]">READY</span>}
+                        </div>
+                        <button 
+                          onClick={() => handleRefineItem(tool)}
+                          disabled={refiningId === tool.id}
+                          className={`w-full py-4 ${refined ? 'bg-gray-800 text-gray-500 cursor-default' : 'bg-purple-600 text-white'} font-black rounded-2xl text-[10px] transition uppercase tracking-widest shadow-xl`}
+                        >
+                          {refiningId === tool.id ? 'SYNTHESIZING VOICE...' : refined ? 'VOICE APPLIED' : 'REWRITE TO BRAND VOICE'}
+                        </button>
+                        {refined && (
+                          <div className="pt-4 border-t border-white/5 space-y-2 text-right">
+                             <p className="text-[10px] text-gray-600 uppercase font-black">Refined Hook:</p>
+                             <p className="text-white text-[11px] font-bold">"{refined.hook}"</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Final Catalog (Ready for Public) */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-blue-500/20 pb-3">
+                   <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">3. Refined Catalog</h3>
+                   <span className="text-[10px] text-blue-900 font-mono">READY</span>
+                </div>
+                <div className="space-y-4 max-h-[800px] overflow-y-auto pr-3 custom-scrollbar">
+                  {refinedItems.map(item => (
+                    <div key={item.id} className="bg-gray-900/60 p-6 rounded-[35px] border border-gray-800 space-y-4 animate-in fade-in duration-500 text-right">
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-gray-600 uppercase">Premium Hook</span>
+                        <h4 className="font-black text-white text-sm leading-tight">{item.hook}</h4>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-gray-600 uppercase">The 1% Case</span>
+                        <p className="text-gray-500 text-[10px] leading-relaxed">{item.justification}</p>
+                      </div>
+                      <div className="pt-2">
+                        <p className="text-blue-400 text-[11px] font-bold italic">"{item.verdict}"</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'public' && (
+        <main className="max-w-7xl mx-auto px-10 pb-40 space-y-40">
+           <section className="min-h-[70vh] flex flex-col lg:flex-row items-center justify-between gap-16 py-20">
+              <div className="flex-1 text-right space-y-8 animate-in slide-in-from-right duration-1000">
+                <h1 className="text-7xl md:text-9xl font-black leading-[0.9] tracking-tighter uppercase">
+                  Filtering <br/>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-l from-purple-400 via-teal-300 to-white">The Noise.</span><br/>
+                  <span className="opacity-40">Signal only.</span>
+                </h1>
+                <p className="text-gray-400 text-xl md:text-3xl font-light max-w-2xl ml-auto leading-relaxed">
+                  אוצרות אנושית קפדנית של כלי ה-AI המובילים בעולם. אנחנו מסננים (99% מהרעש) כדי שתקבלו רק את מה שמשנה באמת.
+                </p>
+                <div className="pt-10">
+                  <button className="px-14 py-6 bg-white text-black font-black rounded-full text-xl hover:scale-105 transition shadow-[0_0_60px_rgba(255,255,255,0.1)]">
+                    JOIN THE 1% ELITE
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 relative flex justify-center">
+                <div className="absolute w-[120%] h-[120%] bg-purple-500/5 blur-[100px] animate-pulse rounded-full"></div>
+                {mascotUrl && <img src={mascotUrl} className="relative z-10 w-full max-w-lg rounded-[60px] shadow-2xl animate-float border border-white/5" />}
+              </div>
+           </section>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {refinedItems.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => setSelectedItem(item)}
+                  className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[50px] p-10 space-y-8 hover:bg-white/10 transition-all duration-700 hover:-translate-y-4 cursor-pointer group relative"
+                >
+                   <div className="space-y-4 text-right">
+                     <div className="flex justify-between items-start flex-row-reverse border-b border-white/5 pb-4 mb-2">
+                        <span className="text-[10px] font-black text-teal-400 uppercase tracking-widest">Premium Discovery</span>
+                        <div className="flex gap-2 flex-row-reverse overflow-x-auto custom-scrollbar pb-1 no-scrollbar">
+                           {SOCIAL_PLATFORMS.map(platform => (
+                             <button 
+                               key={platform.id}
+                               onClick={(e) => executeSocialShare(e, platform, item)}
+                               className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center text-gray-500 transition-all duration-300 hover:text-white"
+                               style={{'--hover-glow': platform.glow} as any}
+                               title={`Share on ${platform.name}`}
+                             >
+                                <div className="transition-transform duration-300 hover:scale-110 group-hover:drop-shadow-[0_0_8px_var(--hover-glow)]">
+                                  {platform.icon}
+                                </div>
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+                     <h3 className="text-3xl font-black text-white leading-tight group-hover:text-purple-400 transition">{item.hook}</h3>
+                   </div>
+                   <div className="space-y-3 text-right">
+                     <h4 className="text-[10px] font-black text-gray-500 uppercase">The 1% Justification:</h4>
+                     <p className="text-gray-400 text-sm leading-relaxed font-medium line-clamp-4">{item.justification}</p>
+                   </div>
+                   <div className="pt-6 border-t border-white/10 italic text-white font-bold text-right text-lg">"{item.verdict}"</div>
+                   <div className="flex justify-between items-center pt-4">
+                     <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest group-hover:underline">Read Analysis</span>
+                     <span className="text-[10px] text-gray-700 font-mono">#REF_{item.id.slice(0,6)}</span>
+                   </div>
+                </div>
+              ))}
+           </div>
+           
+           {/* MODAL DETAILED VIEW */}
+           {selectedItem && (
+             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12 overflow-y-auto" dir="rtl">
+                <div 
+                  className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-500" 
+                  onClick={() => setSelectedItem(null)} 
+                />
+                <div className="relative bg-[#0a0a0a] border border-white/10 rounded-[60px] max-w-4xl w-full p-10 md:p-16 space-y-12 animate-in zoom-in-95 duration-500 shadow-2xl">
+                   <button 
+                     onClick={() => setSelectedItem(null)}
+                     className="absolute top-10 left-10 w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-gray-400 hover:bg-white hover:text-black transition"
+                   >
+                     ✕
+                   </button>
+                   
+                   <header className="space-y-4 text-right">
+                     <div className="flex justify-between items-center flex-row-reverse">
+                        <span className="text-xs font-black text-purple-400 uppercase tracking-[0.3em]">Cosmic Insight #{selectedItem.id.slice(0,4)}</span>
+                        <div className="flex gap-3">
+                           {SOCIAL_PLATFORMS.map(platform => (
+                             <button 
+                               key={platform.id}
+                               onClick={(e) => executeSocialShare(e, platform, selectedItem)}
+                               className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 hover:bg-white/10 hover:text-white transition"
+                               title={`Share on ${platform.name}`}
+                             >
+                               {platform.icon}
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+                     <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">{selectedItem.hook}</h2>
+                   </header>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      <div className="space-y-6 text-right">
+                         <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Curator's Justification (The 1%)</h4>
+                         <p className="text-xl text-gray-300 leading-relaxed font-light">{selectedItem.justification}</p>
+                      </div>
+                      <div className="space-y-10">
+                        <div className="bg-purple-500/5 border border-purple-500/20 p-8 rounded-[40px] text-right space-y-4">
+                           <h4 className="text-xs font-black text-purple-400 uppercase tracking-widest">Mentor Verdict</h4>
+                           <p className="text-2xl font-black text-white italic leading-snug">"{selectedItem.verdict}"</p>
+                        </div>
+                        <div className="bg-white/5 p-8 rounded-[40px] text-right space-y-4">
+                           <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Primary Source</h4>
+                           <div className="space-y-2">
+                              <p className="text-white font-bold text-sm truncate">{selectedItem.originalTitle}</p>
+                              <a 
+                                href={selectedItem.originalLink} 
+                                target="_blank" 
+                                className="inline-block px-8 py-3 bg-white text-black font-black rounded-full text-xs hover:scale-105 transition"
+                              >
+                                LAUNCH SOURCE
+                              </a>
+                           </div>
+                        </div>
+                      </div>
+                   </div>
+
+                   <footer className="pt-10 border-t border-white/5 flex justify-center">
+                      <p className="text-[9px] font-black text-gray-700 uppercase tracking-[0.5em] italic">Synthesized by the super-mentor engine</p>
+                   </footer>
+                </div>
+             </div>
+           )}
+        </main>
+      )}
+
+      {view === 'analysis' && data && (
+        <div className="max-w-7xl mx-auto px-10 py-20 space-y-12 text-right animate-in fade-in duration-1000">
+           <header className="space-y-4">
+             <h1 className="text-8xl font-black uppercase italic tracking-tighter leading-none">Strategic <br/>Blueprint.</h1>
+             <p className="text-gray-500 text-3xl font-light">The "Super-Mentor" Vision for Market Domination.</p>
+           </header>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-20">
+              <div className="bg-gray-900/50 p-12 rounded-[60px] border border-gray-800 space-y-10">
+                 <h3 className="text-3xl font-black text-purple-400 uppercase">Market Frictions</h3>
+                 <div className="space-y-6">
+                    {data.friction.map((f, i) => (
+                      <div key={i} className="flex gap-6 items-start flex-row-reverse group">
+                        <span className="text-purple-500 font-black text-4xl opacity-20 group-hover:opacity-100 transition">0{i+1}</span>
+                        <p className="text-gray-400 text-xl font-medium leading-relaxed pt-2">{f}</p>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+              <div className="bg-gray-900/50 p-12 rounded-[60px] border border-gray-800 space-y-10">
+                 <h3 className="text-3xl font-black text-emerald-400 uppercase">Competitive Gaps</h3>
+                 <div className="space-y-6">
+                    {data.snapshot.map((c, i) => (
+                      <div key={i} className="bg-black/40 p-6 rounded-3xl border border-gray-800 flex justify-between items-center group flex-row-reverse">
+                         <div className="text-right">
+                           <h4 className="text-xl font-black text-white">{c.name}</h4>
+                           <p className="text-gray-500 text-sm mt-1">{c.promise}</p>
+                         </div>
+                         <div className="text-xs font-mono text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full">{c.traffic}</div>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {view === 'spec' && data && (
+        <div className="max-w-7xl mx-auto px-10 py-20 space-y-12 text-right animate-in slide-in-from-right duration-700">
+           <h1 className="text-8xl font-black text-white tracking-tighter uppercase leading-none italic">MVP Spec.</h1>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-10">
+              {data.features.map((f, i) => (
+                <div key={i} className="bg-gray-900 p-12 rounded-[60px] border border-gray-800 hover:border-emerald-500/30 transition-all duration-500 group">
+                  <div className="w-16 h-16 bg-emerald-500/10 rounded-full mb-8 flex items-center justify-center text-3xl group-hover:bg-emerald-500 group-hover:text-black transition">✨</div>
+                  <h3 className="text-3xl font-black text-white mb-6 leading-tight">{f.title}</h3>
+                  <p className="text-gray-400 text-xl leading-relaxed font-light">{f.description}</p>
+                </div>
+              ))}
+           </div>
+        </div>
+      )}
+
+      {/* ADMIN TOOLS */}
+      <div className="fixed bottom-10 left-10 no-print">
+        <button 
+          onClick={() => { if(confirm('Wipe History?')) { setApprovedTools([]); setRefinedItems([]); } }}
+          className="w-12 h-12 bg-red-900/20 text-red-500 rounded-full flex items-center justify-center hover:bg-red-900/40 transition border border-red-500/10"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default App;
