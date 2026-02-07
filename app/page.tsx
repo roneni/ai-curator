@@ -7,8 +7,8 @@ import {
   fetchAICompanies,
   refineCuratedContent,
   generateBrandMascot
-} from './services/geminiService';
-import { AnalysisResult, AIDomain, AICompany, CurationFilters, RefinedItem } from './types';
+} from '../services/geminiService';
+import { AnalysisResult, AIDomain, AICompany, CurationFilters, RefinedItem } from '../types';
 
 const AI_DOMAINS: AIDomain[] = [
   { id: 'experimental', name: 'Experimental Tools', subfields: ['Google Labs', 'Edge Cases', 'Creative Tech', 'Future UX', 'Unstable Releases', 'Alpha Prototypes'] },
