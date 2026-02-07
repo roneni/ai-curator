@@ -101,7 +101,7 @@ export const getMarketAnalysis = async (ideaDescription: string): Promise<Analys
       }
     });
 
-    const text = response.text ? (typeof response.text === 'function' ? response.text() : response.text) : "{}";
+    const text = response.text || "{}";
     const parsedData = JSON.parse(text);
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const urls = groundingChunks
@@ -133,6 +133,7 @@ export const fetchAICompanies = async (): Promise<AICompany[]> => {
   `;
 
   try {
+    if (!ai) return [];
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -180,6 +181,7 @@ export const discoverTrendingAINews = async (filters: CurationFilters) => {
   `;
 
   try {
+    if (!ai) throw new Error("AI not initialized");
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -217,6 +219,7 @@ export const refineCuratedContent = async (rawItem: any): Promise<RefinedItem> =
     { "hook": "string", "justification": "string", "verdict": "string" }
   `;
 
+  if (!ai) return "";
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
     contents: prompt,
@@ -225,7 +228,8 @@ export const refineCuratedContent = async (rawItem: any): Promise<RefinedItem> =
     }
   });
 
-  const refined = JSON.parse(response.text);
+  const text = response.text || "{}";
+  const refined = JSON.parse(text);
   return {
     ...refined,
     id: rawItem.id || `refined-${Date.now()}`,
@@ -235,6 +239,7 @@ export const refineCuratedContent = async (rawItem: any): Promise<RefinedItem> =
 };
 
 export const generateBrandMascot = async (): Promise<string> => {
+  if (!ai) return ''; // Add null check for ai instance
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: {
@@ -246,10 +251,9 @@ export const generateBrandMascot = async (): Promise<string> => {
     },
   });
 
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
-    }
+  const base64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (base64) {
+    return `data:image/png;base64,${base64}`;
   }
   return '';
 };
