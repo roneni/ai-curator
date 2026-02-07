@@ -177,7 +177,7 @@ export async function discoverTrendingAINews(filters: CurationFilters) {
     
     CRITERIA: 
     - Actively hunt for IN-DEVELOPMENT items.
-    - Focus on the last 48-72 hours only.
+    - Focus on the last 7 days (Feb 2026).
     - High-Signal only (Top 1% impact).
     
     Language: Hebrew.

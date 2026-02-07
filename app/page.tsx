@@ -381,7 +381,7 @@ const App: React.FC = () => {
                 disabled={isSyncing}
                 className="w-full py-6 bg-white text-black font-black rounded-3xl hover:bg-gray-200 transition shadow-xl text-xs tracking-widest uppercase"
               >
-                {isSyncing ? 'SYNCING LEAKS...' : 'RUN DEEP SCAN'}
+                {isSyncing ? 'SYNCING LEAKS...' : 'RUN DEEP SCAN (v2.1)'}
               </button>
             </div>
 
