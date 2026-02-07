@@ -3,11 +3,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, CurationFilters, AICompany, RefinedItem } from "../types";
 
-// Safe initialization
-const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-console.log("Deep Scan: API Key present:", !!apiKey);
-
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// Helper to get AI instance eagerly
+function getAI() {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    console.log("Deep Scan: API Key loaded from env:", !!apiKey, "Length:", apiKey.length);
+    return apiKey ? new GoogleGenAI({ apiKey }) : null;
+}
 
 // Mock Data for UI Verification
 const MOCK_ANALYSIS: AnalysisResult = {
@@ -35,6 +36,7 @@ const MOCK_ANALYSIS: AnalysisResult = {
 };
 
 export async function getMarketAnalysis(ideaDescription: string): Promise<AnalysisResult> {
+    const ai = getAI();
     if (!ai) {
         console.warn("No API Key found, returning MOCK DATA for Strategy View");
         return new Promise(resolve => setTimeout(() => resolve(MOCK_ANALYSIS), 1000));
@@ -123,6 +125,7 @@ export async function getMarketAnalysis(ideaDescription: string): Promise<Analys
 }
 
 export async function fetchAICompanies(): Promise<AICompany[]> {
+    const ai = getAI();
     if (!ai) return [];
 
     const prompt = `
@@ -183,7 +186,11 @@ export async function discoverTrendingAINews(filters: CurationFilters) {
   `;
 
     try {
-        if (!ai) throw new Error("AI not initialized");
+        const ai = getAI();
+        if (!ai) {
+            console.error("Deep Scan Error: AI not initialized (Key missing)");
+            throw new Error("AI not initialized (Key missing)");
+        }
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: prompt,
@@ -221,6 +228,7 @@ export async function refineCuratedContent(rawItem: any): Promise<RefinedItem> {
     { "hook": "string", "justification": "string", "verdict": "string" }
   `;
 
+    const ai = getAI();
     if (!ai) throw new Error("AI not initialized"); // Throw error only if AI is strictly needed and missing, though page handles it
 
     try {
@@ -247,6 +255,7 @@ export async function refineCuratedContent(rawItem: any): Promise<RefinedItem> {
 }
 
 export async function generateBrandMascot(): Promise<string> {
+    const ai = getAI();
     if (!ai) return '';
     try {
         const response = await ai.models.generateContent({
