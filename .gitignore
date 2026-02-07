@@ -1,53 +1,26 @@
-<<<<<<< HEAD
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
+# Node modules and build
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Env / Secrets
+.env
+.env.*
+
+# IDE / OS
 .DS_Store
+.idea/
+.vscode/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
-=======
-# Node modules and build outputs
-node_modules/
-dist/
-build/
-.vite/
-dist-ssr/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-*.log
-
-# Env / secrets (do NOT commit real API keys)
-.env
-.env.*
-.env.local
-
-# IDE and OS files
-.vscode/
-.idea/
-.DS_Store
-
-# TypeScript/Vite caches
-*.tsbuildinfo
-.cache/
->>>>>>> 1f92478f009290c6cb7e9e66c18c455c05ccfdd6
