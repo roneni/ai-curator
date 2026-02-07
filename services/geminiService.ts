@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, CurationFilters, AICompany, RefinedItem } from "../types";
 
 // Safe initialization
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Mock Data for UI Verification
