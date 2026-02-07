@@ -7,7 +7,7 @@ import {
   fetchAICompanies,
   refineCuratedContent,
   generateBrandMascot
-} from '../services/geminiService';
+} from './actions';
 import { AnalysisResult, AIDomain, AICompany, CurationFilters, RefinedItem } from '../types';
 
 const AI_DOMAINS: AIDomain[] = [
