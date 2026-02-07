@@ -115,7 +115,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<'analysis' | 'spec' | 'discovery' | 'public'>('analysis');
 
   // Brand Assets
-  const [mascotUrl, setMascotUrl] = useState<string>(() => localStorage.getItem('curator_mascot') || '');
+  const [mascotUrl, setMascotUrl] = useState<string>('');
   const [isGeneratingMascot, setIsGeneratingMascot] = useState(false);
 
   // Curation Filters States
@@ -130,15 +130,23 @@ const App: React.FC = () => {
   // Discovery / Production Line States
   const [isSyncing, setIsSyncing] = useState(false);
   const [discoveredAlerts, setDiscoveredAlerts] = useState<any[]>([]);
-  const [approvedTools, setApprovedTools] = useState<any[]>(() => {
-    const saved = localStorage.getItem('curator_approved_tools');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [approvedTools, setApprovedTools] = useState<any[]>([]);
 
-  const [refinedItems, setRefinedItems] = useState<RefinedItem[]>(() => {
-    const saved = localStorage.getItem('curator_refined_items');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [refinedItems, setRefinedItems] = useState<RefinedItem[]>([]);
+
+  // Hydrate from LocalStorage on Client Mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMascot = localStorage.getItem('curator_mascot');
+      if (savedMascot) setMascotUrl(savedMascot);
+
+      const savedTools = localStorage.getItem('curator_approved_tools');
+      if (savedTools) setApprovedTools(JSON.parse(savedTools));
+
+      const savedItems = localStorage.getItem('curator_refined_items');
+      if (savedItems) setRefinedItems(JSON.parse(savedItems));
+    }
+  }, []);
   const [refiningId, setRefiningId] = useState<string | null>(null);
 
   // Modal State
