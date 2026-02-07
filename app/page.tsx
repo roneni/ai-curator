@@ -651,7 +651,7 @@ const App: React.FC = () => {
           <div className="bg-gray-950/50 p-8 rounded-[40px] border border-red-900/20 hover:border-red-500/30 transition group">
             <h4 className="text-xs font-black text-red-500 uppercase tracking-[0.3em] mb-6">Eliminate</h4>
             <ul className="space-y-3">
-              {data.errc.eliminate.map((item, i) => (
+              {data?.errc.eliminate.map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-400 group-hover:text-red-200 transition">
                   <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                   <span className="text-lg font-medium">{item}</span>
@@ -664,7 +664,7 @@ const App: React.FC = () => {
           <div className="bg-gray-950/50 p-8 rounded-[40px] border border-emerald-900/20 hover:border-emerald-500/30 transition group">
             <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] mb-6">Raise</h4>
             <ul className="space-y-3">
-              {data.errc.raise.map((item, i) => (
+              {data?.errc.raise.map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-400 group-hover:text-emerald-200 transition">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                   <span className="text-lg font-medium">{item}</span>
@@ -677,7 +677,7 @@ const App: React.FC = () => {
           <div className="bg-gray-950/50 p-8 rounded-[40px] border border-yellow-900/20 hover:border-yellow-500/30 transition group">
             <h4 className="text-xs font-black text-yellow-500 uppercase tracking-[0.3em] mb-6">Reduce</h4>
             <ul className="space-y-3">
-              {data.errc.reduce.map((item, i) => (
+              {data?.errc.reduce.map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-400 group-hover:text-yellow-200 transition">
                   <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
                   <span className="text-lg font-medium">{item}</span>
@@ -691,7 +691,7 @@ const App: React.FC = () => {
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full"></div>
             <h4 className="text-xs font-black text-blue-500 uppercase tracking-[0.3em] mb-6 relative z-10">Create</h4>
             <ul className="space-y-3 relative z-10">
-              {data.errc.create.map((item, i) => (
+              {data?.errc.create.map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-400 group-hover:text-blue-200 transition">
                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                   <span className="text-lg font-medium">{item}</span>
