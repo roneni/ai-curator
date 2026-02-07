@@ -142,7 +142,7 @@ export const fetchAICompanies = async (): Promise<AICompany[]> => {
         responseMimeType: "application/json"
       }
     });
-    const data = JSON.parse(response.text);
+    const data = JSON.parse(response.text || "{}");
     return data.companies || [];
   } catch (error) {
     console.error("Fetch AI companies failed:", error);
@@ -191,7 +191,7 @@ export const discoverTrendingAINews = async (filters: CurationFilters) => {
       }
     });
 
-    const data = JSON.parse(response.text);
+    const data = JSON.parse(response.text || "{}");
     const items = data.items || [];
     return items.map((item: any, idx: number) => ({
       ...item,
@@ -219,7 +219,7 @@ export const refineCuratedContent = async (rawItem: any): Promise<RefinedItem> =
     { "hook": "string", "justification": "string", "verdict": "string" }
   `;
 
-  if (!ai) return "";
+  if (!ai) throw new Error("AI not initialized");
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
     contents: prompt,
