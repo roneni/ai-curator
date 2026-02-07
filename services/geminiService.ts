@@ -101,7 +101,8 @@ export const getMarketAnalysis = async (ideaDescription: string): Promise<Analys
       }
     });
 
-    const parsedData = JSON.parse(response.text);
+    const text = response.text ? (typeof response.text === 'function' ? response.text() : response.text) : "{}";
+    const parsedData = JSON.parse(text);
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const urls = groundingChunks
       .map((chunk: any) => chunk.web?.uri)
